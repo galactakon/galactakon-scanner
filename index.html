@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, maximum-scale=1"
+  >
+
+  <title>GalactaKon Live Check-In</title>
+
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 16px;
+      background: #f2f2f2;
+      font-family: Arial, sans-serif;
+      text-align: center;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 520px;
+      margin: 0 auto;
+      padding: 18px;
+      background: #ffffff;
+      border-radius: 14px;
+      box-shadow: 0 3px 14px rgba(0, 0, 0, 0.12);
+    }
+
+    h1 {
+      margin: 0 0 16px;
+      font-size: 27px;
+    }
+
+    #reader {
+      width: 100%;
+      margin: 0 auto 14px;
+      overflow: hidden;
+      border-radius: 10px;
+    }
+
+    button {
+      width: 100%;
+      margin-top: 9px;
+      padding: 14px;
+      border: 0;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    #startButton {
+      background: #111111;
+      color: #ffffff;
+    }
+
+    #stopButton {
+      display: none;
+      background: #dddddd;
+      color: #222222;
+    }
+
+    .divider {
+      margin: 18px 0 10px;
+      color: #777777;
+      font-size: 13px;
+      font-weight: bold;
+    }
+
+    #ticketInput {
+      width: 100%;
+      padding: 13px;
+      border: 1px solid #aaaaaa;
+      border-radius: 8px;
+      font-size: 16px;
+    }
+
+    #manualButton {
+      background: #5b2a96;
+      color: #ffffff;
+    }
+
+    #result {
+      min-height: 62px;
+      margin-top: 16px;
+      padding: 14px;
+      border-radius: 9px;
+      background: #eeeeee;
+      font-size: 18px;
+      font-weight: bold;
+      overflow-wrap: anywhere;
+    }
+
+    .success {
+      background: #d8f5dd !important;
+      color: #126420;
+    }
+
+    .warning {
+      background: #ffe0e0 !important;
+      color: #941616;
+    }
+
+    .working {
+      background: #fff1bd !important;
+      color: #665000;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="container">
+
+    <h1>🎟️ GalactaKon Check-In</h1>
+
+    <div id="reader"></div>
+
+    <button
+      id="startButton"
+      type="button"
+      onclick="startCamera()"
+    >
+      START LIVE CAMERA
+    </button>
+
+    <button
+      id="stopButton"
+      type="button"
+      onclick="stopCamera()"
+    >
+      STOP CAMERA
+    </button>
+
+    <div class="divider">
+      OR ENTER THE QR VALUE MANUALLY
+    </div>
+
+    <input
+      id="ticketInput"
+      type="text"
+      placeholder="Enter QR value"
+      autocomplete="off"
+    >
+
+    <button
+      id="manualButton"
+      type="button"
+      onclick="manualCheckIn()"
+    >
+      CHECK IN
+    </button>
+
+    <div id="result">
+      Tap START LIVE CAMERA.
+    </div>
+
+  </div>
+
+  <script>
+    const APPS_SCRIPT_URL =
+      "https://script.google.com/macros/s/AKfycbwnc2fuOX6QDX2AjO7xI4Gt3UIhdK4LnTIckfYhaIVI1d5wFiiueRr9RQ9IqnyeR1Hc/exec";
+
+    let scanner = null;
+    let cameraRunning = false;
+    let scanLocked = false;
+
+    const resultBox =
+      document.getElementById("result");
+
+    const ticketInput =
+      document.getElementById("ticketInput");
+
+    const startButton =
+      document.getElementById("startButton");
+
+    const stopButton =
+      document.getElementById("stopButton");
+
+
+    function showResult(message, className) {
+      resultBox.className = className || "";
+      resultBox.textContent = message;
+    }
+
+
+    function releaseScannerLock(delay) {
+      setTimeout(function() {
+        scanLocked = false;
+
+        if (cameraRunning) {
+          showResult("Ready for next scan…", "");
+        }
+      }, delay || 2500);
+    }
+
+
+    function sendCheckIn(scannedValue) {
+      const code = String(scannedValue || "").trim();
+
+      if (!code) {
+        showResult(
+          "Please scan or enter a QR value.",
+          "warning"
+        );
+
+        return;
+      }
+
+      if (scanLocked) {
+        return;
+      }
+
+      scanLocked = true;
+      showResult("Checking ticket…", "working");
+
+      const callbackName =
+        "galactaCallback_" +
+        Date.now() +
+        "_" +
+        Math.floor(Math.random() * 100000);
+
+      const requestScript =
+        document.createElement("script");
+
+      const timeout = setTimeout(function() {
+        cleanup();
+
+        showResult(
+          "The check-in request timed out. Check the internet connection.",
+          "warning"
+        );
+
+        releaseScannerLock(3000);
+      }, 15000);
+
+
+      function cleanup() {
+        clearTimeout(timeout);
+
+        if (requestScript.parentNode) {
+          requestScript.parentNode.removeChild(requestScript);
+        }
+
+        try {
+          delete window[callbackName];
+        } catch (error) {
+          window[callbackName] = undefined;
+        }
+      }
+
+
+      window[callbackName] = function(response) {
+        cleanup();
+
+        const message =
+          response && response.message
+            ? String(response.message)
+            : "ERROR: Empty response.";
+
+        if (message.startsWith("VALID")) {
+          showResult(
+            "🟢 " + message,
+            "success"
+          );
+        } else if (message.startsWith("ALREADY USED")) {
+          showResult(
+            "🔴 " + message,
+            "warning"
+          );
+        } else {
+          showResult(
+            "❌ " + message,
+            "warning"
+          );
+        }
+
+        ticketInput.value = "";
+        releaseScannerLock(2500);
+      };
+
+
+      requestScript.onerror = function() {
+        cleanup();
+
+        showResult(
+          "Unable to contact the check-in system.",
+          "warning"
+        );
+
+        releaseScannerLock(3000);
+      };
+
+
+      requestScript.src =
+        APPS_SCRIPT_URL +
+        "?action=checkin" +
+        "&code=" +
+        encodeURIComponent(code) +
+        "&callback=" +
+        encodeURIComponent(callbackName) +
+        "&t=" +
+        Date.now();
+
+      document.body.appendChild(requestScript);
+    }
+
+
+    async function startCamera() {
+      if (cameraRunning) {
+        return;
+      }
+
+      if (typeof Html5Qrcode === "undefined") {
+        showResult(
+          "The QR scanner library did not load.",
+          "warning"
+        );
+
+        return;
+      }
+
+      showResult(
+        "Requesting camera permission…",
+        "working"
+      );
+
+      try {
+        scanner = new Html5Qrcode("reader");
+
+        await scanner.start(
+          {
+            facingMode: "environment"
+          },
+          {
+            fps: 12,
+            qrbox: {
+              width: 240,
+              height: 240
+            },
+            aspectRatio: 1
+          },
+          function(decodedText) {
+            sendCheckIn(decodedText);
+          },
+          function() {
+            // Normal while searching for a QR code.
+          }
+        );
+
+        cameraRunning = true;
+
+        startButton.style.display = "none";
+        stopButton.style.display = "block";
+
+        showResult("Ready to scan…", "");
+
+      } catch (error) {
+        scanner = null;
+        cameraRunning = false;
+
+        const message =
+          error && error.message
+            ? error.message
+            : String(error);
+
+        showResult(
+          "Camera error: " + message,
+          "warning"
+        );
+      }
+    }
+
+
+    async function stopCamera() {
+      if (!scanner || !cameraRunning) {
+        return;
+      }
+
+      try {
+        await scanner.stop();
+        await scanner.clear();
+      } catch (error) {
+        console.log(error);
+      }
+
+      scanner = null;
+      cameraRunning = false;
+
+      startButton.style.display = "block";
+      stopButton.style.display = "none";
+
+      showResult("Camera stopped.", "");
+    }
+
+
+    function manualCheckIn() {
+      sendCheckIn(ticketInput.value);
+    }
+
+
+    ticketInput.addEventListener(
+      "keydown",
+      function(event) {
+        if (event.key === "Enter") {
+          manualCheckIn();
+        }
+      }
+    );
+  </script>
+
+</body>
+</html>
