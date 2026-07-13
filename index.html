@@ -10,7 +10,9 @@
 
   <title>GalactaKon Live Check-In</title>
 
-  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <script
+    src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js">
+  </script>
 
   <style>
     * {
@@ -100,6 +102,13 @@
       overflow-wrap: anywhere;
     }
 
+    #lastScanned {
+      margin-top: 10px;
+      color: #666666;
+      font-size: 12px;
+      overflow-wrap: anywhere;
+    }
+
     .success {
       background: #d8f5dd !important;
       color: #126420;
@@ -164,6 +173,8 @@
       Tap START LIVE CAMERA.
     </div>
 
+    <div id="lastScanned"></div>
+
   </div>
 
   <script>
@@ -176,6 +187,9 @@
 
     const resultBox =
       document.getElementById("result");
+
+    const lastScannedBox =
+      document.getElementById("lastScanned");
 
     const ticketInput =
       document.getElementById("ticketInput");
@@ -204,8 +218,68 @@
     }
 
 
+    function cleanScannedValue(scannedValue) {
+      let code = String(scannedValue || "")
+        .replace(/[\u200B-\u200D\uFEFF]/g, "")
+        .trim();
+
+      // Remove matching quotation marks if the scanner includes them.
+      if (
+        (code.startsWith('"') && code.endsWith('"')) ||
+        (code.startsWith("'") && code.endsWith("'"))
+      ) {
+        code = code.slice(1, -1).trim();
+      }
+
+      // Decode URL-encoded text when appropriate.
+      try {
+        const decoded = decodeURIComponent(code);
+
+        if (decoded) {
+          code = decoded.trim();
+        }
+      } catch (error) {
+        // Leave the value unchanged when it is not URL encoded.
+      }
+
+      /*
+       * Some QR generators may encode the entire QuickChart URL
+       * instead of only the UUID. If that happens, extract the
+       * actual UUID stored in the "text" parameter.
+       */
+      if (
+        code.includes("quickchart.io/qr") &&
+        code.includes("text=")
+      ) {
+        try {
+          const scannedUrl = new URL(code);
+          const embeddedValue =
+            scannedUrl.searchParams.get("text");
+
+          if (embeddedValue) {
+            code = decodeURIComponent(embeddedValue)
+              .replace(/[\u200B-\u200D\uFEFF]/g, "")
+              .trim();
+          }
+        } catch (error) {
+          console.log(
+            "Could not extract the QuickChart value:",
+            error
+          );
+        }
+      }
+
+      return code;
+    }
+
+
     function sendCheckIn(scannedValue) {
-      const code = String(scannedValue || "").trim();
+      const code = cleanScannedValue(scannedValue);
+
+      lastScannedBox.textContent =
+        code
+          ? "Scanned value: " + code
+          : "";
 
       if (!code) {
         showResult(
@@ -248,7 +322,9 @@
         clearTimeout(timeout);
 
         if (requestScript.parentNode) {
-          requestScript.parentNode.removeChild(requestScript);
+          requestScript.parentNode.removeChild(
+            requestScript
+          );
         }
 
         try {
@@ -272,7 +348,9 @@
             "🟢 " + message,
             "success"
           );
-        } else if (message.startsWith("ALREADY USED")) {
+        } else if (
+          message.startsWith("ALREADY USED")
+        ) {
           showResult(
             "🔴 " + message,
             "warning"
@@ -350,10 +428,15 @@
             aspectRatio: 1
           },
           function(decodedText) {
+            console.log(
+              "Raw QR image value:",
+              decodedText
+            );
+
             sendCheckIn(decodedText);
           },
           function() {
-            // Normal while searching for a QR code.
+            // Normal while the camera searches for a QR code.
           }
         );
 
