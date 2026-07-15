@@ -52,7 +52,7 @@
 
     .container {
       width: 100%;
-      max-width: 540px;
+      max-width: 560px;
       margin: 0 auto;
     }
 
@@ -73,32 +73,168 @@
       font-size: 14px;
     }
 
-    .top-bar {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 9px;
+    .ready-dot {
+      display: inline-block;
+      width: 9px;
+      height: 9px;
+      margin-right: 6px;
+      border-radius: 50%;
+      background: #35d56f;
+      box-shadow: 0 0 8px rgba(53, 213, 111, 0.7);
+    }
+
+    .dashboard {
       margin-bottom: 12px;
+      padding: 13px;
+      border: 1px solid #443354;
+      border-radius: 16px;
+      background: var(--card);
+    }
+
+    .dashboard-heading {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 11px;
+    }
+
+    .dashboard-title {
+      font-size: 17px;
+      font-weight: 900;
+    }
+
+    #refreshStatsButton {
+      width: auto;
+      min-height: 36px;
+      margin: 0;
+      padding: 8px 11px;
+      background: var(--card-light);
+      color: var(--text);
+      font-size: 12px;
+    }
+
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
     }
 
     .stat-card {
-      padding: 12px;
+      padding: 11px 6px;
       border: 1px solid #443354;
-      border-radius: 12px;
-      background: var(--card);
+      border-radius: 11px;
+      background: var(--card-light);
       text-align: center;
     }
 
     .stat-label {
       color: var(--muted);
-      font-size: 12px;
+      font-size: 10px;
       font-weight: bold;
       text-transform: uppercase;
     }
 
     .stat-value {
-      margin-top: 4px;
+      margin-top: 5px;
       font-size: 22px;
+      font-weight: 900;
+    }
+
+    .progress-track {
+      height: 10px;
+      margin-top: 12px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: #15101c;
+    }
+
+    #progressBar {
+      width: 0%;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(
+        90deg,
+        var(--purple),
+        #ae68ef
+      );
+      transition: width 0.35s ease;
+    }
+
+    .progress-text {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      margin-top: 7px;
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .pass-list {
+      display: grid;
+      gap: 7px;
+      margin-top: 12px;
+    }
+
+    .pass-row {
+      padding: 10px;
+      border: 1px solid #49385b;
+      border-radius: 10px;
+      background: #1d1626;
+    }
+
+    .pass-row-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .pass-name {
+      font-size: 13px;
       font-weight: 800;
+      text-align: left;
+    }
+
+    .pass-category {
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 10px;
+      text-align: left;
+    }
+
+    .pass-count {
+      white-space: nowrap;
+      font-size: 14px;
+      font-weight: 900;
+    }
+
+    .pass-progress-track {
+      height: 6px;
+      margin-top: 8px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: #0f0c14;
+    }
+
+    .pass-progress-bar {
+      height: 100%;
+      border-radius: inherit;
+      background: var(--purple);
+    }
+
+    #statsUpdated {
+      margin-top: 9px;
+      color: var(--muted);
+      font-size: 10px;
+      text-align: center;
+    }
+
+    .top-bar {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 9px;
+      margin-bottom: 12px;
     }
 
     .scanner-card {
@@ -273,16 +409,6 @@
       text-align: center;
     }
 
-    .ready-dot {
-      display: inline-block;
-      width: 9px;
-      height: 9px;
-      margin-right: 6px;
-      border-radius: 50%;
-      background: #35d56f;
-      box-shadow: 0 0 8px rgba(53, 213, 111, 0.7);
-    }
-
     @media (max-width: 420px) {
       body {
         padding: 9px;
@@ -299,6 +425,10 @@
       .result-title {
         font-size: 24px;
       }
+
+      .stat-value {
+        font-size: 19px;
+      }
     }
   </style>
 </head>
@@ -309,15 +439,69 @@
 
     <header class="header">
       <h1>🎟️ GalactaKon Check-In</h1>
+
       <p>
         <span class="ready-dot"></span>
         Live gate scanner
       </p>
     </header>
 
+    <section class="dashboard">
+
+      <div class="dashboard-heading">
+        <div class="dashboard-title">
+          Live Attendance
+        </div>
+
+        <button
+          id="refreshStatsButton"
+          type="button"
+          onclick="fetchDashboardStats()"
+        >
+          ↻ REFRESH
+        </button>
+      </div>
+
+      <div class="dashboard-grid">
+
+        <div class="stat-card">
+          <div class="stat-label">Total</div>
+          <div id="totalTickets" class="stat-value">—</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-label">Checked In</div>
+          <div id="totalCheckedIn" class="stat-value">—</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-label">Remaining</div>
+          <div id="totalRemaining" class="stat-value">—</div>
+        </div>
+
+      </div>
+
+      <div class="progress-track">
+        <div id="progressBar"></div>
+      </div>
+
+      <div class="progress-text">
+        <span id="percentageText">Loading attendance…</span>
+        <span id="attendanceFraction"></span>
+      </div>
+
+      <div id="passList" class="pass-list"></div>
+
+      <div id="statsUpdated">
+        Loading live statistics…
+      </div>
+
+    </section>
+
     <section class="top-bar">
+
       <div class="stat-card">
-        <div class="stat-label">Session Check-Ins</div>
+        <div class="stat-label">This Device</div>
         <div id="sessionCount" class="stat-value">0</div>
       </div>
 
@@ -325,6 +509,7 @@
         <div class="stat-label">Scanner</div>
         <div id="scannerStatus" class="stat-value">Off</div>
       </div>
+
     </section>
 
     <section class="scanner-card">
@@ -348,6 +533,7 @@
       </button>
 
       <section class="manual-section">
+
         <div class="manual-title">
           Manual Ticket Entry
         </div>
@@ -368,9 +554,11 @@
         >
           CHECK IN
         </button>
+
       </section>
 
       <section id="resultCard">
+
         <div id="resultIcon" class="result-icon">📷</div>
 
         <div id="resultTitle" class="result-title">
@@ -384,6 +572,7 @@
         </div>
 
         <div id="resultTime" class="result-time"></div>
+
       </section>
 
       <div id="lastScanned"></div>
@@ -397,12 +586,14 @@
       "https://script.google.com/macros/s/AKfycbwnc2fuOX6QDX2AjO7xI4Gt3UIhdK4LnTIckfYhaIVI1d5wFiiueRr9RQ9IqnyeR1Hc/exec";
 
     const RESULT_DISPLAY_TIME = 3000;
+    const STATS_REFRESH_INTERVAL = 15000;
 
     let scanner = null;
     let cameraRunning = false;
     let scanLocked = false;
     let sessionCheckIns = 0;
     let audioContext = null;
+    let statsRequestRunning = false;
 
     const resultCard =
       document.getElementById("resultCard");
@@ -440,6 +631,30 @@
     const sessionCountBox =
       document.getElementById("sessionCount");
 
+    const totalTicketsBox =
+      document.getElementById("totalTickets");
+
+    const totalCheckedInBox =
+      document.getElementById("totalCheckedIn");
+
+    const totalRemainingBox =
+      document.getElementById("totalRemaining");
+
+    const progressBar =
+      document.getElementById("progressBar");
+
+    const percentageText =
+      document.getElementById("percentageText");
+
+    const attendanceFraction =
+      document.getElementById("attendanceFraction");
+
+    const passList =
+      document.getElementById("passList");
+
+    const statsUpdated =
+      document.getElementById("statsUpdated");
+
 
     function getAudioContext() {
       if (!audioContext) {
@@ -465,10 +680,12 @@
 
       const oscillator = context.createOscillator();
       const gain = context.createGain();
+
       const startTime =
         context.currentTime + (delay || 0);
 
       oscillator.type = type || "sine";
+
       oscillator.frequency.setValueAtTime(
         frequency,
         startTime
@@ -538,8 +755,11 @@
       resultIcon.textContent = "📷";
       resultTitle.textContent = "Ready";
       resultTicket.textContent = "";
+
       resultPass.textContent =
-        message || "Position the QR inside the camera box.";
+        message ||
+        "Position the QR inside the camera box.";
+
       resultTime.textContent = "";
     }
 
@@ -549,8 +769,7 @@
       resultIcon.textContent = "⏳";
       resultTitle.textContent = "CHECKING";
       resultTicket.textContent = "";
-      resultPass.textContent =
-        "Verifying ticket…";
+      resultPass.textContent = "Verifying ticket…";
       resultTime.textContent = "";
     }
 
@@ -572,7 +791,8 @@
       return {
         ticketID: parts[0] || "",
         passName: parts[1] || "",
-        extra: parts.slice(2).join(" — ")
+        category: parts[2] || "",
+        extra: parts.slice(3).join(" — ")
       };
     }
 
@@ -581,21 +801,31 @@
       const details = parseResponseMessage(message);
 
       sessionCheckIns++;
+
       sessionCountBox.textContent =
         sessionCheckIns;
 
       resultCard.className = "success";
       resultIcon.textContent = "✓";
       resultTitle.textContent = "CHECKED IN";
-      resultTicket.textContent =
-        details.ticketID;
+      resultTicket.textContent = details.ticketID;
+
       resultPass.textContent =
-        details.passName || "Valid Ticket";
+        [details.passName, details.category]
+          .filter(Boolean)
+          .join(" • ") ||
+        "Valid Ticket";
+
       resultTime.textContent =
         "Checked in at " + formatTime();
 
       playSuccessSound();
       vibrate(120);
+
+      setTimeout(
+        fetchDashboardStats,
+        500
+      );
     }
 
 
@@ -604,13 +834,15 @@
 
       resultCard.className = "duplicate";
       resultIcon.textContent = "⚠";
-      resultTitle.textContent =
-        "ALREADY USED";
-      resultTicket.textContent =
-        details.ticketID;
+      resultTitle.textContent = "ALREADY USED";
+      resultTicket.textContent = details.ticketID;
+
       resultPass.textContent =
-        details.passName ||
-        "This ticket was previously checked in.";
+        [details.passName, details.category]
+          .filter(Boolean)
+          .join(" • ") ||
+        "This ticket was already checked in.";
+
       resultTime.textContent =
         details.extra || formatTime();
 
@@ -622,12 +854,13 @@
     function showInvalid(message) {
       resultCard.className = "invalid";
       resultIcon.textContent = "✕";
-      resultTitle.textContent =
-        "INVALID TICKET";
+      resultTitle.textContent = "INVALID TICKET";
       resultTicket.textContent = "";
+
       resultPass.textContent =
         message ||
         "Ticket could not be found.";
+
       resultTime.textContent =
         "Send guest to Registration.";
 
@@ -639,10 +872,10 @@
     function showSystemError(message) {
       resultCard.className = "error";
       resultIcon.textContent = "!";
-      resultTitle.textContent =
-        "SYSTEM ERROR";
+      resultTitle.textContent = "SYSTEM ERROR";
       resultTicket.textContent = "";
       resultPass.textContent = message;
+
       resultTime.textContent =
         "Check the internet connection.";
 
@@ -696,6 +929,7 @@
       ) {
         try {
           const scannedUrl = new URL(code);
+
           const embeddedValue =
             scannedUrl.searchParams.get("text");
 
@@ -750,9 +984,7 @@
         "galactaCallback_" +
         Date.now() +
         "_" +
-        Math.floor(
-          Math.random() * 100000
-        );
+        Math.floor(Math.random() * 100000);
 
       const requestScript =
         document.createElement("script");
@@ -811,6 +1043,7 @@
         }
 
         ticketInput.value = "";
+
         releaseScannerLock(
           RESULT_DISPLAY_TIME
         );
@@ -844,14 +1077,234 @@
     }
 
 
+    function renderDashboard(data) {
+      if (!data || data.success !== true) {
+        statsUpdated.textContent =
+          "Dashboard error: " +
+          (
+            data && data.error
+              ? data.error
+              : "No data received."
+          );
+
+        return;
+      }
+
+      const total =
+        Number(data.total || 0);
+
+      const checkedIn =
+        Number(data.checkedIn || 0);
+
+      const remaining =
+        Number(data.remaining || 0);
+
+      const percentage =
+        Number(data.percentage || 0);
+
+      totalTicketsBox.textContent = total;
+      totalCheckedInBox.textContent = checkedIn;
+      totalRemainingBox.textContent = remaining;
+
+      progressBar.style.width =
+        Math.max(
+          0,
+          Math.min(100, percentage)
+        ) + "%";
+
+      percentageText.textContent =
+        percentage + "% checked in";
+
+      attendanceFraction.textContent =
+        checkedIn + " / " + total;
+
+      passList.innerHTML = "";
+
+      const passData =
+        Array.isArray(data.byPass)
+          ? data.byPass
+          : [];
+
+      passData.forEach(function(item) {
+        const passTotal =
+          Number(item.total || 0);
+
+        const passCheckedIn =
+          Number(item.checkedIn || 0);
+
+        const passPercentage =
+          passTotal > 0
+            ? Math.round(
+                passCheckedIn /
+                passTotal *
+                100
+              )
+            : 0;
+
+        const row =
+          document.createElement("div");
+
+        row.className = "pass-row";
+
+        const rowTop =
+          document.createElement("div");
+
+        rowTop.className = "pass-row-top";
+
+        const details =
+          document.createElement("div");
+
+        const name =
+          document.createElement("div");
+
+        name.className = "pass-name";
+
+        name.textContent =
+          item.passName ||
+          "Uncategorized";
+
+        const category =
+          document.createElement("div");
+
+        category.className = "pass-category";
+
+        category.textContent =
+          item.category || "";
+
+        details.appendChild(name);
+
+        if (item.category) {
+          details.appendChild(category);
+        }
+
+        const count =
+          document.createElement("div");
+
+        count.className = "pass-count";
+
+        count.textContent =
+          passCheckedIn +
+          " / " +
+          passTotal;
+
+        rowTop.appendChild(details);
+        rowTop.appendChild(count);
+
+        const track =
+          document.createElement("div");
+
+        track.className =
+          "pass-progress-track";
+
+        const bar =
+          document.createElement("div");
+
+        bar.className =
+          "pass-progress-bar";
+
+        bar.style.width =
+          passPercentage + "%";
+
+        track.appendChild(bar);
+
+        row.appendChild(rowTop);
+        row.appendChild(track);
+
+        passList.appendChild(row);
+      });
+
+      const updateTime = data.updatedAt
+        ? new Date(data.updatedAt)
+        : new Date();
+
+      statsUpdated.textContent =
+        "Last updated: " +
+        updateTime.toLocaleTimeString(
+          [],
+          {
+            hour: "numeric",
+            minute: "2-digit",
+            second: "2-digit"
+          }
+        );
+    }
+
+
+    function fetchDashboardStats() {
+      if (statsRequestRunning) {
+        return;
+      }
+
+      statsRequestRunning = true;
+
+      const callbackName =
+        "galactaStats_" +
+        Date.now() +
+        "_" +
+        Math.floor(Math.random() * 100000);
+
+      const requestScript =
+        document.createElement("script");
+
+      const timeout = setTimeout(function() {
+        cleanupStatsRequest();
+
+        statsUpdated.textContent =
+          "Dashboard refresh timed out.";
+      }, 15000);
+
+
+      function cleanupStatsRequest() {
+        clearTimeout(timeout);
+        statsRequestRunning = false;
+
+        if (requestScript.parentNode) {
+          requestScript.parentNode.removeChild(
+            requestScript
+          );
+        }
+
+        try {
+          delete window[callbackName];
+        } catch (error) {
+          window[callbackName] = undefined;
+        }
+      }
+
+
+      window[callbackName] = function(data) {
+        cleanupStatsRequest();
+        renderDashboard(data);
+      };
+
+
+      requestScript.onerror = function() {
+        cleanupStatsRequest();
+
+        statsUpdated.textContent =
+          "Unable to refresh attendance.";
+      };
+
+
+      requestScript.src =
+        APPS_SCRIPT_URL +
+        "?action=stats" +
+        "&callback=" +
+        encodeURIComponent(callbackName) +
+        "&t=" +
+        Date.now();
+
+      document.body.appendChild(
+        requestScript
+      );
+    }
+
+
     async function startCamera() {
       if (cameraRunning) {
         return;
       }
 
-      /*
-       * Initialises sound after a user gesture.
-       */
       const context = getAudioContext();
 
       if (
@@ -876,6 +1329,7 @@
       }
 
       showWorking();
+
       resultPass.textContent =
         "Requesting camera permission…";
 
@@ -981,6 +1435,13 @@
       function() {
         showReady(
           "Tap START LIVE CAMERA."
+        );
+
+        fetchDashboardStats();
+
+        setInterval(
+          fetchDashboardStats,
+          STATS_REFRESH_INTERVAL
         );
       }
     );
